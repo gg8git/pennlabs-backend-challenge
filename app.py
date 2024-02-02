@@ -1,11 +1,13 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from flask_bcrypt import Bcrypt
 
 DB_FILE = "clubreview.db"
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_FILE}"
 db = SQLAlchemy(app)
+bcrypt = Bcrypt(app)
 
 from models import *
 

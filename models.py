@@ -1,6 +1,5 @@
-from app import db
+from app import db, bcrypt
 from flask_login import UserMixin
-from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import date
 
 # Your database models should go here.
@@ -28,35 +27,6 @@ ROLE_NAMES = {
     ROLE_OFFICER: 'Officer',
     ROLE_FOUNDER: 'Founder',
 }
-
-class User(db.Model, UserMixin):
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    username = db.Column(db.String(20), unique=True, nullable=False)
-    email = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(20), unique=True, nullable=False)
-    first_name = db.Column(db.String(20), unique=True, nullable=False)
-    last_name = db.Column(db.String(20), unique=True, nullable=False)
-
-    def __repr__(self):
-        return f"User ('{self.username}', '{self.email}')"
-    
-    def get_full_name(self):
-        return f"{self.first_name} {self.last_name}"
-    
-    def get_first_name(self):
-        return self.first_name
-    
-    def get_user_email(self):
-        return self.email
-    
-    def set_password(self, new_password):
-        self.password = generate_password_hash(new_password)
-
-    def check_password(self, check_password):
-        return check_password_hash(self.password, check_password)
-    
-    def get_clubs(self):
-        return self.clubs.all()
     
 class Club(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -65,7 +35,7 @@ class Club(db.Model):
     description = db.Column(db.String(300), unique=True, nullable=False)
     tags = db.relationship('Tag', secondary=tags, lazy='subquery',
         backref=db.backref('clubs', lazy=True))
-    members = db.relationship('Member', secondary=members, lazy='subquery',
+    members = db.relationship('User', secondary=members, lazy='subquery',
         backref=db.backref('clubs', lazy=True))
     
     def __repr__(self):
@@ -106,6 +76,35 @@ class Club(db.Model):
             self.tags.remove(tag)
             db.session.execute(tags.delete().where(tags.c.tag_id == tag.id, tags.c.club_id == self.id))
             db.session.commit()
+
+class User(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    username = db.Column(db.String(20), unique=True, nullable=False)
+    email = db.Column(db.String(80), unique=True, nullable=False)
+    password = db.Column(db.String(20), unique=True, nullable=False)
+    first_name = db.Column(db.String(20), unique=True, nullable=False)
+    last_name = db.Column(db.String(20), unique=True, nullable=False)
+
+    def __repr__(self):
+        return f"User ('{self.username}', '{self.email}')"
+    
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}"
+    
+    def get_first_name(self):
+        return self.first_name
+    
+    def get_user_email(self):
+        return self.email
+    
+    def set_password(self, new_password):
+        self.password = bcrypt.generate_password_hash(new_password)
+
+    def check_password(self, check_password):
+        return bcrypt.check_password_hash(self.password, check_password)
+    
+    def get_clubs(self):
+        return self.clubs.all()
     
 class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
