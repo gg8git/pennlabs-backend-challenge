@@ -30,7 +30,7 @@ ROLE_NAMES = {
 }
 
 class User(db.Model, UserMixin):
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
     email = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(20), unique=True, nullable=False)
@@ -59,7 +59,7 @@ class User(db.Model, UserMixin):
         return self.clubs.all()
     
 class Club(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     code = db.Column(db.String(30), unique=True, nullable=False)
     name = db.Column(db.String(180), unique=True, nullable=False)
     description = db.Column(db.String(300), unique=True, nullable=False)
@@ -108,7 +108,7 @@ class Club(db.Model):
             db.session.commit()
     
 class Tag(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
 
     def get_tagged_clubs(self):
