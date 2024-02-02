@@ -2,7 +2,7 @@ import os
 
 from app import app, db, DB_FILE
 
-from models import *
+from models import User
 
 def create_user():
     print("TODO: Create a user called josh")
