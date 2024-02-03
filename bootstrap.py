@@ -11,8 +11,8 @@ def create_user():
     db.session.commit()
 
 def load_data():
-    script_path = os.path.abspath(__file__)
-    clubs_json_path = os.path.join(os.path.dirname(script_path), 'clubs', 'clubs.json')
+    script_path = os.path.basename(__file__)
+    clubs_json_path = os.path.join(os.path.dirname(script_path), 'clubs.json')
 
     if os.path.exists(clubs_json_path):
         with open(clubs_json_path, 'r') as file:
@@ -20,6 +20,7 @@ def load_data():
             for club in clubs_data:
                 new_club = Club(code=club["code"],name=club["name"],description=club["description"])
                 db.session.add(new_club)
+                db.session.commit()
                 for tag_name in club["tags"]:
                     tag = Tag.query.filter_by(name=tag_name).first()
                     if tag:
