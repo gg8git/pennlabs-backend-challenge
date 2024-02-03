@@ -3,7 +3,7 @@ import json
 
 from app import app, db, DB_FILE
 
-from models import User, Club, Tag
+from models import Club, User, Tag
 
 def create_user():
     user_josh = User(username="justjoshing",email="josh@upenn.edu",password="awooga",first_name="Josh",last_name="Joshua")
