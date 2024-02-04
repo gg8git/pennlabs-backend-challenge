@@ -20,6 +20,47 @@ def main():
 def api():
     return jsonify({"message": "Welcome to the Penn Club Review API!."})
 
+# POST: input username, email, password, first name, last name - registers user in site if registration is valid
+@app.route("/register", methods=["POST"])
+def register():
+    registration = request.get_json()
+
+    required_fields = ["username", "email", "password", "first_name", "last_name"]
+    for field in required_fields:
+        if field not in registration:
+            abort(400, f"Missing required field: {field}")
+    
+    user = User(username=registration["username"],email=registration["email"],password=registration["password"],
+                first_name=registration["first_name"],last_name=registration["last_name"])
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({"message": "Registration successful"})
+
+# POST: input username, email, password, first name, last name - registers user in site if registration is valid
+@app.route("/login", methods=["POST"])
+def login():
+    login = request.get_json()
+
+    required_fields = ["username/email","password"]
+    for field in required_fields:
+        if field not in login:
+            abort(400, f"Missing required field: {field}")
+    
+    user = User.query.filter_by(username=login["username/email"]).first()
+    if user:
+        if user.check_password(login["password"]):
+            return jsonify({"message": "Login successful"})
+        return jsonify({"message": "Invalid password"})
+    else:
+        user = User.query.filter_by(email=login["username/email"]).first()
+        if user:
+            if user.check_password(login["password"]):
+                return jsonify({"message": "Login successful"})
+            return jsonify({"message": "Invalid password"})
+    return jsonify({"message": "Invalid email/username"})
+
+# GET: no input - returns json with information of all clubs
+# PUT: input code, name, description, tags - adds club to database
 @app.route("/api/clubs", methods=["GET", "PUT"])
 def access_all_clubs():
     if request.method == "GET":
@@ -30,6 +71,7 @@ def access_all_clubs():
             "favorite_count": club.get_favorite_count(),
             "tags": [tag.get_tag_name() for tag in club.get_tags()],
             "members": [member.get_full_name() for member in club.get_members()],
+            "officers": [officer.get_full_name() for officer in club.get_officers()],
             "reviews": [review.get_review_id() for review in club.get_reviews()]
         } for club in Club.query.all()]
         return jsonify({"clubs": clubs})
@@ -58,6 +100,9 @@ def access_all_clubs():
         db.session.commit()
         return jsonify({"message": "Club added"})
 
+# GET: no input - returns json with current club information 
+# PATCH: input code, name, description, tags - updates current club information
+# DELETE: no input - deletes current club from database
 @app.route("/api/clubs/<string:club_name>", methods=["GET", "PATCH", "DELETE"])
 def access_club(club_name):
     club = Club.query.filter_by(name=club_name).first()
@@ -70,6 +115,7 @@ def access_club(club_name):
                 "favorite_count": club.get_favorite_count(),
                 "tags": [tag.get_tag_name() for tag in club.get_tags()],
                 "members": [member.get_full_name() for member in club.get_members()],
+                "officers": [officer.get_full_name() for officer in club.get_officers()],
                 "reviews": [review.get_review_id() for review in club.get_reviews()]
             })
     elif request.method == "PATCH":
@@ -90,6 +136,9 @@ def access_club(club_name):
         else:
             abort(400, "Club does not exist")
 
+# GET: no input - returns json with current club tags 
+# PUT: input tag name - adds tag to current club tags
+# DELETE: input tag name - deletes tag from current club tags
 @app.route("/api/clubs/<string:club_name>/tags", methods=["GET", "PUT", "DELETE"])
 def access_club_tags(club_name):
     club = Club.query.filter_by(name=club_name).first()
@@ -118,7 +167,10 @@ def access_club_tags(club_name):
                 abort(400, "Invalid tag name")
             db.session.commit()
             return jsonify({"message": "Tag removed from club"})
-        
+
+# GET: no input - returns json with current club members 
+# PUT: input username - adds member to current club members
+# DELETE: input username - deletes member from current club members
 @app.route("/api/clubs/<string:club_name>/members", methods=["GET", "PUT", "DELETE"])
 def access_club_members(club_name):
     club = Club.query.filter_by(name=club_name).first()
@@ -147,6 +199,47 @@ def access_club_members(club_name):
             db.session.commit()
             return jsonify({"message": "User removed from club"})
         
+# GET: no input - returns json with current club officers 
+# PUT: input officer name - adds officer to current club officers
+# DELETE: input officer name - deletes officer from current club officers
+@app.route("/api/clubs/<string:club_name>/members/emails", methods=["GET"])
+def access_club_members_emails(club_name):
+    club = Club.query.filter_by(name=club_name).first()
+    if club:
+        emails = [member.get_user_email() for member in club.get_members()]
+        return jsonify({"emails": emails})
+        
+@app.route("/api/clubs/<string:club_name>/officers", methods=["GET", "PUT", "DELETE"])
+def access_club_officers(club_name):
+    club = Club.query.filter_by(name=club_name).first()
+    if request.method == "GET":
+        if club:
+            officers = [officer.get_full_name() for officer in club.get_officers()]
+            return jsonify({"members": officers})
+    elif request.method == "PUT":
+        officer = request.get_json()
+        if "username" in officer:
+            user = User.query.filter_by(username=officer["username"]).first()
+            if user:
+                club.add_officer(user)
+            else:
+                abort(400, "Invalid username")
+            db.session.commit()
+            return jsonify({"message": "User added to club officers"})
+    elif request.method == "DELETE":
+        officer = request.get_json()
+        if "username" in officer:
+            user = User.query.filter_by(username=officer["username"]).first()
+            if user:
+                club.remove_officer(user)
+            else:
+                abort(400, "Invalid username")
+            db.session.commit()
+            return jsonify({"message": "User removed from club officers"})
+
+# GET: no input - returns json with current club reviews 
+# PUT: input title, rating, username - adds review to current club reviews
+# DELETE: input review id - deletes review from current club reviews
 @app.route("/api/clubs/<string:club_name>/reviews", methods=["GET", "PUT", "DELETE"])
 def access_club_reviews(club_name):
     club = Club.query.filter_by(name=club_name).first()
@@ -170,6 +263,8 @@ def access_club_reviews(club_name):
         user = User.query.filter_by(username=review["username"]).first()
         if not user:
             abort(400, "Invalid username")
+        if review["rating"] > 10 or review["rating"] < 0:
+            abort(400, "Invalid rating")
         new_review = Review(title=review["title"],rating=review["rating"],review_user=user,review_club=club)
         if "description" in required_fields:
             new_review.set_review_description(review["description"])
@@ -187,6 +282,7 @@ def access_club_reviews(club_name):
             db.session.commit()
             return jsonify({"message": "Review removed from club"})
 
+# GET: no input - returns json with all club information where the club name contains the given string
 @app.route("/api/clubs/search-club/<string:search_str>", methods=["GET"])
 def search_club(search_str):
     clubs = [{
@@ -195,6 +291,7 @@ def search_club(search_str):
         "description": club.get_club_description(), 
         "tags": [tag.get_tag_name() for tag in club.get_tags()],
         "members": [member.get_full_name() for member in club.get_members()],
+        "officers": [officer.get_full_name() for officer in club.get_officers()],
         "reviews": [review.get_review_id() for review in club.get_reviews()]
     } for club in Club.query.filter(Club.name.ilike(f"%{search_str}%")).all()]
     return jsonify({"clubs": clubs})
@@ -208,7 +305,8 @@ def access_all_users():
             "first_name": user.get_first_name(), 
             "last_name": user.get_last_name(),
             "favorites": [club.get_club_name() for club in user.get_favorites()],
-            "membership": [club.get_club_name() for club in user.get_clubs()],
+            "membership": [club.get_club_name() for club in user.get_member_clubs()],
+            "officership": [club.get_club_name() for club in user.get_officer_clubs()],
             "reviews": [review.get_review_id() for review in user.get_reviews()]
         } for user in User.query.all()]
         return jsonify({"users": users})
@@ -226,6 +324,9 @@ def access_all_users():
         db.session.commit()
         return jsonify({"message": "User added"})
 
+# GET: no input - returns json with current user information 
+# PATCH: input username, email, first_name, last_name - updates current user information
+# DELETE: no input - deletes current user from database
 @app.route("/api/users/<string:username>", methods=["GET", "PATCH", "DELETE"])
 def access_user(username):
     user = User.query.filter_by(username=username).first()
@@ -237,7 +338,9 @@ def access_user(username):
                 "first_name": user.get_first_name(), 
                 "last_name": user.get_last_name(),
                 "favorites": [club.get_club_name() for club in user.get_favorites()],
-                "clubs": [club.get_club_name() for club in user.get_clubs()]
+                "membership": [club.get_club_name() for club in user.get_member_clubs()],
+                "officership": [club.get_club_name() for club in user.get_officer_clubs()],
+                "reviews": [review.get_review_id() for review in user.get_reviews()]
             })
     elif request.method == "PATCH":
         new_user = request.get_json()
@@ -259,6 +362,19 @@ def access_user(username):
         else:
             abort(400, "User does not exist")
 
+# POST: input new password - changes password for current user
+@app.route("/api/users/<string:username>/change-password", methods=["POST"])
+def change_user_password(username):
+    user = User.query.filter_by(username=username).first()
+    new_password = request.get_json()
+    user.set_password(new_password)
+    if (user.check_password(new_password)):
+        return jsonify({"message": "Password change successful"})
+    return jsonify({"message": "Password change unsuccessful"})
+
+# GET: no input - returns json with current user's favorite clubs 
+# PUT: input club name - adds club to current user's favorite clubs
+# DELETE: input club name - deletes club from current user's favorite clubs
 @app.route("/api/users/<string:username>/favorites", methods=["GET", "PUT", "DELETE"])
 def access_user_favorites(username):
     user = User.query.filter_by(username=username).first()
@@ -287,12 +403,15 @@ def access_user_favorites(username):
             db.session.commit()
             return jsonify({"message": "Club removed from user favorites"})
 
-@app.route("/api/users/<string:username>/clubs", methods=["GET", "PUT", "DELETE"])
-def access_user_clubs(username):
+# GET: no input - returns json with current user's membership clubs 
+# PUT: input club name - adds club to current user's membership clubs
+# DELETE: input club name - deletes club from current user's membership clubs
+@app.route("/api/users/<string:username>/members", methods=["GET", "PUT", "DELETE"])
+def access_user_member_clubs(username):
     user = User.query.filter_by(username=username).first()
     if request.method == "GET":
         if user:
-            clubs = [club.get_club_name() for club in user.get_clubs()]
+            clubs = [club.get_club_name() for club in user.get_member_clubs()]
             return jsonify({"clubs": clubs})
     elif request.method == "PUT":
         club_data = request.get_json()
@@ -315,6 +434,20 @@ def access_user_clubs(username):
             db.session.commit()
             return jsonify({"message": "Club removed from user membership"})
         
+# GET: no input - returns json with current user's officership clubs 
+# PUT: input club name - adds club to current user's officership clubs
+# DELETE: input club name - deletes club from current user's officership clubs
+@app.route("/api/users/<string:username>/officers", methods=["GET"])
+def access_user_officer_clubs(username):
+    user = User.query.filter_by(username=username).first()
+    if request.method == "GET":
+        if user:
+            clubs = [club.get_club_name() for club in user.get_officer_clubs()]
+            return jsonify({"clubs": clubs})
+        
+# GET: no input - returns json with current user's reviews 
+# PUT: input title, rating, club name - adds review to current user's reviews
+# DELETE: input review id - deletes review from current user's reviews
 @app.route("/api/users/<string:username>/reviews", methods=["GET", "PUT", "DELETE"])
 def access_user_reviews(username):
     user = User.query.filter_by(username=username).first()
@@ -338,6 +471,8 @@ def access_user_reviews(username):
         club = Club.query.filter_by(name=review["club_name"]).first()
         if not club:
             abort(400, "Invalid club name")
+        if review["rating"] > 10 or review["rating"] < 0:
+            abort(400, "Invalid rating")
         new_review = Review(title=review["title"],rating=review["rating"],review_user=user,review_club=club)
         if "description" in required_fields:
             new_review.set_review_description(review["description"])
@@ -381,6 +516,8 @@ def access_all_reviews():
         club = Club.query.filter_by(name=review["club_name"]).first()
         if not club:
             abort(400, "Invalid club name")
+        if review["rating"] > 10 or review["rating"] < 0:
+            abort(400, "Invalid rating")
         new_review = Review(title=review["title"],rating=review["rating"],review_user=user,review_club=club)
         if "description" in required_fields:
             new_review.set_review_description(review["description"])

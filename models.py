@@ -16,7 +16,10 @@ members = db.Table('members',
     db.Column('club_name', db.Integer, db.ForeignKey('club.name'), primary_key=True)
 )
 
-# add officers
+officers = db.Table('officers',
+    db.Column('user_username', db.Integer, db.ForeignKey('user.username'), primary_key=True),
+    db.Column('club_name', db.Integer, db.ForeignKey('club.name'), primary_key=True)
+)
 
 favorites = db.Table('favorites',
     db.Column('user_username', db.Integer, db.ForeignKey('user.username'), primary_key=True),
@@ -28,10 +31,12 @@ class Club(db.Model):
     name = db.Column(db.String(180), primary_key=True, unique=True, nullable=False)
     description = db.Column(db.String(300), nullable=False)
     favorite_count = db.Column(db.Integer)
-    tags = db.relationship('Tag', secondary=tags, lazy='dynamic',
-        backref=db.backref('tagged_clubs', lazy='dynamic'))
     members = db.relationship('User', secondary=members, lazy='dynamic',
         backref=db.backref('membership_clubs', lazy='dynamic'))
+    officers = db.relationship('User', secondary=officers, lazy='dynamic',
+        backref=db.backref('officership_clubs', lazy='dynamic'))
+    tags = db.relationship('Tag', secondary=tags, lazy='dynamic',
+        backref=db.backref('tagged_clubs', lazy='dynamic'))
     reviews = db.relationship('Review', backref='review_club', lazy=True)
     
     def __repr__(self):
@@ -61,6 +66,21 @@ class Club(db.Model):
     def remove_member(self, user):
         if user in self.members:
             self.members.remove(user)
+            db.session.commit()
+    
+    def get_officers(self):
+        return self.officers
+    
+    def add_officer(self, user):
+        if user not in self.members:
+            self.members.append(user)
+        if user not in self.officers:
+            self.officers.append(user)
+        db.session.commit()
+
+    def remove_officer(self, user):
+        if user in self.officers:
+            self.officers.remove(user)
             db.session.commit()
     
     def get_tags(self):
@@ -126,7 +146,7 @@ class User(db.Model, UserMixin):
             self.favorites.remove(club)
             db.session.commit()
     
-    def get_clubs(self):
+    def get_member_clubs(self):
         return self.membership_clubs.all()
     
     def join_club(self, club):
@@ -135,8 +155,11 @@ class User(db.Model, UserMixin):
     def leave_club(self, club):
         club.remove_member(self)
 
+    def get_officer_clubs(self):
+        return self.officership_clubs.all()
+
     def get_reviews(self):
-        self.reviews
+        return self.reviews
 
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True, unique=True, autoincrement=True)
