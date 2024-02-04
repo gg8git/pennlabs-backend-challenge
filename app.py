@@ -199,16 +199,17 @@ def access_club_members(club_name):
             db.session.commit()
             return jsonify({"message": "User removed from club"})
         
-# GET: no input - returns json with current club officers 
-# PUT: input officer name - adds officer to current club officers
-# DELETE: input officer name - deletes officer from current club officers
+# GET: no input - returns json with emails of all current club members
 @app.route("/api/clubs/<string:club_name>/members/emails", methods=["GET"])
 def access_club_members_emails(club_name):
     club = Club.query.filter_by(name=club_name).first()
     if club:
         emails = [member.get_user_email() for member in club.get_members()]
         return jsonify({"emails": emails})
-        
+
+# GET: no input - returns json with current club officers 
+# PUT: input officer name - adds officer to current club officers
+# DELETE: input officer name - deletes officer from current club officers
 @app.route("/api/clubs/<string:club_name>/officers", methods=["GET", "PUT", "DELETE"])
 def access_club_officers(club_name):
     club = Club.query.filter_by(name=club_name).first()
@@ -296,6 +297,8 @@ def search_club(search_str):
     } for club in Club.query.filter(Club.name.ilike(f"%{search_str}%")).all()]
     return jsonify({"clubs": clubs})
     
+# GET: no input - returns json with information of all users
+# PUT: input username, email, first name, last name - adds user to database
 @app.route("/api/users", methods=["GET", "PUT"])
 def access_all_users():
     if request.method == "GET":
@@ -403,9 +406,9 @@ def access_user_favorites(username):
             db.session.commit()
             return jsonify({"message": "Club removed from user favorites"})
 
-# GET: no input - returns json with current user's membership clubs 
-# PUT: input club name - adds club to current user's membership clubs
-# DELETE: input club name - deletes club from current user's membership clubs
+# GET: no input - returns json with clubs current user is a member of 
+# PUT: input club name - adds current user to specified club members
+# DELETE: input club name - removes current user from specified club members
 @app.route("/api/users/<string:username>/members", methods=["GET", "PUT", "DELETE"])
 def access_user_member_clubs(username):
     user = User.query.filter_by(username=username).first()
@@ -434,9 +437,7 @@ def access_user_member_clubs(username):
             db.session.commit()
             return jsonify({"message": "Club removed from user membership"})
         
-# GET: no input - returns json with current user's officership clubs 
-# PUT: input club name - adds club to current user's officership clubs
-# DELETE: input club name - deletes club from current user's officership clubs
+# GET: no input - returns json with clubs current user is an officer of
 @app.route("/api/users/<string:username>/officers", methods=["GET"])
 def access_user_officer_clubs(username):
     user = User.query.filter_by(username=username).first()
@@ -489,7 +490,9 @@ def access_user_reviews(username):
                 abort(400, "Invalid review id")
             db.session.commit()
             return jsonify({"message": "Review removed from user reviews"})
-        
+
+# GET: no input - returns json with information of all reviews
+# PUT: input title, rating, username, club name - adds review to database
 @app.route("/api/reviews", methods=["GET", "PUT"])
 def access_all_reviews():
     if request.method == "GET":
@@ -525,7 +528,10 @@ def access_all_reviews():
         
         db.session.commit()
         return jsonify({"message": "Review added"})
-    
+
+# GET: no input - returns json with current review information 
+# PATCH: input title, rating, description - updates current review information
+# DELETE: no input - deletes current review from database
 @app.route("/api/reviews/<int:review_id>", methods=["GET", "PATCH", "DELETE"])
 def access_review(review_id):
     review = Review.query.filter_by(id=review_id).first()
@@ -557,6 +563,8 @@ def access_review(review_id):
         else:
             abort(400, "Review does not exist")
 
+# GET: no input - returns json with information of all tags
+# PUT: input tag name - adds tag to database
 @app.route("/api/tags", methods=["GET", "PUT"])
 def access_all_tags():
     if request.method == "GET":
@@ -579,7 +587,10 @@ def access_all_tags():
         
         db.session.commit()
         return jsonify({"message": "Tag added"})
-    
+
+# GET: no input - returns json with current tag information 
+# PATCH: input name - updates current tag information
+# DELETE: no input - deletes current tag from database
 @app.route("/api/tags/<string:tag_name>", methods=["GET", "PATCH", "DELETE"])
 def access_tag(tag_name):
     tag = Tag.query.filter_by(name=tag_name).first()

@@ -6,26 +6,31 @@ from datetime import date
 # Check out the Flask-SQLAlchemy quickstart for some good docs!
 # https://flask-sqlalchemy.palletsprojects.com/en/2.x/quickstart/
 
+# many-to-many mapping - stores associations between tags and clubs
 tags = db.Table('tags',
     db.Column('tag_name', db.Integer, db.ForeignKey('tag.name'), primary_key=True),
     db.Column('club_name', db.Integer, db.ForeignKey('club.name'), primary_key=True)
 )
 
+# many-to-many mapping - stores associations between members (users) and clubs
 members = db.Table('members',
     db.Column('user_username', db.Integer, db.ForeignKey('user.username'), primary_key=True),
     db.Column('club_name', db.Integer, db.ForeignKey('club.name'), primary_key=True)
 )
 
+# many-to-many mapping - stores associations between officers (users) and clubs
 officers = db.Table('officers',
     db.Column('user_username', db.Integer, db.ForeignKey('user.username'), primary_key=True),
     db.Column('club_name', db.Integer, db.ForeignKey('club.name'), primary_key=True)
 )
 
+# many-to-many mapping - stores associations between users and favorite clubs (clubs)
 favorites = db.Table('favorites',
     db.Column('user_username', db.Integer, db.ForeignKey('user.username'), primary_key=True),
     db.Column('club_name', db.Integer, db.ForeignKey('club.name'), primary_key=True)
 )
-    
+
+# Club Object - contains club code, name, description, favorite count, member list, officer list, tags list, and associated reviews
 class Club(db.Model):
     code = db.Column(db.String(30), unique=True, nullable=False)
     name = db.Column(db.String(180), primary_key=True, unique=True, nullable=False)
@@ -37,6 +42,7 @@ class Club(db.Model):
         backref=db.backref('officership_clubs', lazy='dynamic'))
     tags = db.relationship('Tag', secondary=tags, lazy='dynamic',
         backref=db.backref('tagged_clubs', lazy='dynamic'))
+    # one-to-many mapping - stores associations between each club and its reviews
     reviews = db.relationship('Review', backref='review_club', lazy=True)
     
     def __repr__(self):
@@ -66,7 +72,9 @@ class Club(db.Model):
     def remove_member(self, user):
         if user in self.members:
             self.members.remove(user)
-            db.session.commit()
+        if user in self.officers:
+            self.officers.remove(user)
+        db.session.commit()
     
     def get_officers(self):
         return self.officers
@@ -99,6 +107,8 @@ class Club(db.Model):
     def get_reviews(self):
         return self.reviews
 
+# Club Object - contains user username, email, password, first name, last name, favorite clubs list, and associated reviews
+# can access membership club list (+ join/leave function), access officership club list, and encrypt passwords
 class User(db.Model, UserMixin):
     username = db.Column(db.String(30), primary_key=True, unique=True, nullable=False)
     email = db.Column(db.String(80), unique=True, nullable=False)
@@ -107,6 +117,7 @@ class User(db.Model, UserMixin):
     last_name = db.Column(db.String(30), nullable=False)
     favorites = db.relationship('Club', secondary=favorites, lazy='dynamic',
         backref=db.backref('favorite_users', lazy='dynamic'))
+    # one-to-many mapping - stores associations between each user and their reviews
     reviews = db.relationship('Review', backref='review_user', lazy=True)
 
     def __repr__(self):
@@ -161,6 +172,7 @@ class User(db.Model, UserMixin):
     def get_reviews(self):
         return self.reviews
 
+# Club Object - contains review id, title, rating, description, associated user, and associated club
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True, unique=True, autoincrement=True)
     title = db.Column(db.String(150), nullable=False)
@@ -192,7 +204,9 @@ class Review(db.Model):
     
     def get_review_club(self):
         return self.club
-    
+
+# Club Object - contains tag name, and associated club count
+# can access associated clubs
 class Tag(db.Model):
     name = db.Column(db.String(80), primary_key=True, unique=True, nullable=False)
     club_count = db.Column(db.Integer)
