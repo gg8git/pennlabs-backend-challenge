@@ -3,10 +3,10 @@ import json
 
 from app import app, db, DB_FILE
 
-from models import Club, User, Tag
+from models import Club, User, Review, Tag
 
 def create_user():
-    user_josh = User(username="justjoshing",email="josh@upenn.edu",password="awooga",first_name="Josh",last_name="Joshua")
+    user_josh = User(username="josh",email="josh@upenn.edu",password="awooga",first_name="Josh",last_name="Joshua")
     db.session.add(user_josh)
     db.session.commit()
 
